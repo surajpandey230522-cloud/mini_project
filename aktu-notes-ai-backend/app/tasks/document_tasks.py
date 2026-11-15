@@ -38,8 +38,15 @@ async def process_document_pipeline(document_id: uuid.UUID, user_id: uuid.UUID) 
                 logger.error(f"Document {document_id} not found in database during background task.")
                 return
 
-            # 1. Update status to processing
-            await doc_repo.update_status(document_id, DocumentStatus.PROCESSING)
+            file_path = Path(doc.storage_path)
+            filename = doc.original_filename
+
+            # 1. Update status to processing with initial stage
+            await doc_repo.update_status(
+                document_id,
+                DocumentStatus.PROCESSING,
+                error_message="Step 1/3: Extracting text from PDF pages with PyMuPDF...",
+            )
             await db.commit()
         except Exception as e:
             logger.warning(f"Could not initialize document processing for {document_id}: {e}")
@@ -54,28 +61,49 @@ async def process_document_pipeline(document_id: uuid.UUID, user_id: uuid.UUID) 
             chunks = chunking_service.chunk_document(
                 user_id=user_id,
                 document_id=document_id,
-                filename=doc.original_filename,
+                filename=filename,
                 pages=pages,
             )
 
             if not chunks:
-                raise AppException("Document produced no valid text chunks.")
+                raise AppException("Document produced no valid text chunks. File might be blank or scanned without text.")
 
             chunk_count = len(chunks)
             chunk_texts = [c.text for c in chunks]
 
-            # 4. Generate embeddings via Gemini Embedding model
+            # Update stage: chunking finished, embedding started
+            await doc_repo.update_status(
+                document_id=document_id,
+                status=DocumentStatus.PROCESSING,
+                page_count=page_count,
+                chunk_count=chunk_count,
+                error_message=f"Step 2/3: Created {chunk_count} chunks from {page_count} pages. Generating Gemini vector embeddings...",
+            )
+            await db.commit()
+
+            # 4. Generate embeddings via Gemini Embedding model (768 dimensions)
             embeddings = await embedding_service.embed_documents(chunk_texts)
+
+            # Update stage: embedding finished, storing in pgvector
+            await doc_repo.update_status(
+                document_id=document_id,
+                status=DocumentStatus.PROCESSING,
+                page_count=page_count,
+                chunk_count=chunk_count,
+                error_message=f"Step 3/3: Storing {len(embeddings)} vector embeddings in NeonDB pgvector...",
+            )
+            await db.commit()
 
             # 5. Index into NeonDB pgvector
             await vector_service.insert_chunks(chunks, embeddings, db=db)
 
-            # 6. Mark document as completed
+            # 6. Mark document as completed (clear error_message)
             await doc_repo.update_status(
                 document_id=document_id,
                 status=DocumentStatus.COMPLETED,
                 page_count=page_count,
                 chunk_count=chunk_count,
+                error_message=None,
             )
             await db.commit()
             logger.info(

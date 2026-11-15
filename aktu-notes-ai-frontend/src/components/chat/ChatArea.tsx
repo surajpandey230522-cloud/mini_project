@@ -241,49 +241,44 @@ export function ChatArea({
               {processingDocs[0]?.original_filename || "Academic PDF"}
             </p>
 
-            <p className="text-sm text-slate-400 mt-3 max-w-md mx-auto leading-relaxed">
-              We are extracting text, creating semantic chunks, and generating vector embeddings in NeonDB.
-              Your chat will unlock automatically in a few seconds.
-            </p>
+            {/* Live Progress Stage */}
+            <div className="mt-4 p-3 rounded-2xl bg-indigo-950/50 border border-indigo-500/30 text-xs text-indigo-200 flex items-center justify-center gap-2 max-w-md mx-auto animate-pulse">
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-400 shrink-0" />
+              <span className="font-medium">
+                {processingDocs[0]?.error_message || "Extracting text and generating vector embeddings in NeonDB..."}
+              </span>
+            </div>
 
             {/* Pipeline Stage Tracker */}
-            <div className="mt-8 space-y-3 max-w-md mx-auto text-left">
+            <div className="mt-6 space-y-2.5 max-w-md mx-auto text-left">
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900 border border-emerald-900/40 text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <div className="flex-1">
                   <span className="font-semibold text-white">1. PDF Validated & Uploaded</span>
-                  <p className="text-[11px] text-slate-400">Magic byte verification (%PDF-) passed</p>
+                  <p className="text-[11px] text-slate-400">File verified on server storage</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/40 text-xs shadow-md">
                 <Loader2 className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
                 <div className="flex-1">
-                  <span className="font-semibold text-indigo-200">2. PyMuPDF Text Extraction</span>
-                  <p className="text-[11px] text-indigo-300/80">Scanning pages and verifying text readability</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-500">
-                <Layers className="w-4 h-4 text-slate-600 shrink-0" />
-                <div className="flex-1">
-                  <span className="font-semibold text-slate-400">3. Chunking & Overlap</span>
-                  <p className="text-[11px] text-slate-600">Preserving page boundaries and syllabus citations</p>
+                  <span className="font-semibold text-indigo-200">2. Text Extraction & Chunking</span>
+                  <p className="text-[11px] text-indigo-300/80">PyMuPDF page scanning and academic overlap chunking</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-500">
                 <Database className="w-4 h-4 text-slate-600 shrink-0" />
                 <div className="flex-1">
-                  <span className="font-semibold text-slate-400">4. Gemini Embeddings & NeonDB pgvector</span>
-                  <p className="text-[11px] text-slate-600">Indexing 768-dim vectors for cosine similarity</p>
+                  <span className="font-semibold text-slate-400">3. Gemini Embeddings & NeonDB pgvector</span>
+                  <p className="text-[11px] text-slate-600">Generating 768-dim embeddings and saving vectors</p>
                 </div>
               </div>
             </div>
           </div>
         ) : !isCurrentlyProcessing && selectedDocIds.length === 0 && failedDocs.length > 0 && completedDocs.length === 0 ? (
           /* Processing Failed Screen */
-          <div className="max-w-xl mx-auto py-12 px-4 text-center animate-in fade-in">
+          <div className="max-w-xl mx-auto py-10 px-4 text-center animate-in fade-in">
             <div className="w-16 h-16 rounded-3xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto mb-4">
               <AlertCircle className="w-8 h-8" />
             </div>
@@ -293,19 +288,32 @@ export function ChatArea({
             <p className="text-xs font-mono text-rose-300 mt-1 max-w-sm mx-auto truncate px-3 py-1 rounded-lg bg-rose-950/60 border border-rose-800/40">
               {failedDocs[0].original_filename}
             </p>
-            <p className="text-sm text-slate-300 mt-3 max-w-md mx-auto leading-relaxed">
-              {failedDocs[0].error_message || "The document could not be processed. It may be an image-only scan or corrupted."}
-            </p>
+
+            <div className="mt-4 p-4 rounded-2xl bg-rose-950/40 border border-rose-900/60 text-left text-xs text-rose-200">
+              <p className="font-semibold text-rose-400 mb-1 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0" /> Error Details from Backend:
+              </p>
+              <p className="font-mono text-[11px] bg-slate-950/60 p-2.5 rounded-xl border border-rose-900/40 break-words leading-relaxed text-rose-300">
+                {failedDocs[0].error_message || "The document could not be processed. It may be an image-only scan or corrupted."}
+              </p>
+              <div className="mt-3 text-[11px] text-slate-400 space-y-1">
+                <p className="font-semibold text-slate-300">Possible reasons & how to fix:</p>
+                <p>• <strong>Scanned PDF:</strong> The file only contains images without selectable text. Use OCR or a text-based PDF.</p>
+                <p>• <strong>Timeout:</strong> The server restarted or free-tier spun down. Click "Retry Processing" below.</p>
+                <p>• <strong>Password/Corrupted:</strong> Ensure the PDF is unencrypted and not corrupted.</p>
+              </div>
+            </div>
+
             <div className="mt-6 flex items-center justify-center gap-3">
               <button
                 onClick={() => retryDocument(failedDocs[0].id)}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition-all hover:scale-105"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Retry Processing
               </button>
               <button
                 onClick={() => deleteDocument(failedDocs[0].id, failedDocs[0].original_filename)}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold"
+                className="px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors"
               >
                 Delete & Upload Another
               </button>

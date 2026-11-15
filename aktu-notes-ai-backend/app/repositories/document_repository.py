@@ -74,9 +74,11 @@ class DocumentRepository:
         original_filename: str,
         storage_path: str,
         file_size: int,
+        document_id: Optional[uuid.UUID] = None,
     ) -> Document:
         """Create a new document record."""
         document = Document(
+            id=document_id or uuid.uuid4(),
             user_id=user_id,
             original_filename=original_filename,
             storage_path=storage_path,

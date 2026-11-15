@@ -130,13 +130,14 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, refreshDocuments]);
 
-  // Polling loop while any document is in pending or processing status
+  // Continuous polling loop: rapid (2s) while documents are processing, and periodic (10s) standing poll
   useEffect(() => {
-    if (!isAuthenticated || processingDocs.length === 0) return;
+    if (!isAuthenticated) return;
 
+    const pollInterval = processingDocs.length > 0 ? 2000 : 10000;
     const interval = setInterval(() => {
       refreshDocuments(true);
-    }, 2500);
+    }, pollInterval);
 
     return () => clearInterval(interval);
   }, [isAuthenticated, processingDocs.length, refreshDocuments]);

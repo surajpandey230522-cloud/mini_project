@@ -245,12 +245,14 @@ export function DocumentManager() {
                       )}
                       {isProcessing && (
                         <span className="text-amber-400 flex items-center gap-1 font-medium animate-pulse">
-                          <Clock className="w-3 h-3" /> Indexing vectors...
+                          <Loader2 className="w-3 h-3 animate-spin text-amber-400 shrink-0" />
+                          <span className="truncate">{doc.error_message || "Processing..."}</span>
                         </span>
                       )}
                       {isFailed && (
-                        <span className="text-rose-400 truncate" title={doc.error_message || "Processing failed"}>
-                          Failed
+                        <span className="text-rose-400 font-medium flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
+                          <span>Processing Failed</span>
                         </span>
                       )}
                     </div>
@@ -287,9 +289,18 @@ export function DocumentManager() {
                 </div>
 
                 {isFailed && doc.error_message && (
-                  <p className="mt-2 text-[10px] text-rose-400 bg-rose-950/30 p-1.5 rounded-lg border border-rose-900/50">
-                    {doc.error_message}
-                  </p>
+                  <div className="mt-2 text-[10px] text-rose-300 bg-rose-950/50 p-2 rounded-xl border border-rose-900/60 break-words leading-relaxed">
+                    <p className="font-semibold text-rose-400 flex items-center gap-1 mb-0.5">
+                      <AlertTriangle className="w-3 h-3 shrink-0" /> Error Details:
+                    </p>
+                    <p>{doc.error_message}</p>
+                  </div>
+                )}
+                {isProcessing && doc.error_message && (
+                  <div className="mt-2 text-[10px] text-indigo-300 bg-indigo-950/40 p-2 rounded-xl border border-indigo-800/40 leading-relaxed flex items-center gap-1.5">
+                    <Loader2 className="w-3 h-3 animate-spin text-indigo-400 shrink-0" />
+                    <span>{doc.error_message}</span>
+                  </div>
                 )}
               </div>
             );

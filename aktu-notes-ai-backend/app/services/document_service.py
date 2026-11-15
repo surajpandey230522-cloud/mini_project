@@ -100,7 +100,9 @@ class DocumentService:
             original_filename=safe_filename,
             storage_path=str(storage_path),
             file_size=total_size,
+            document_id=doc_id,
         )
+        await self.db.commit()
 
         # 5. Queue asynchronous processing pipeline
         background_tasks.add_task(process_document_pipeline, document.id, user_id)
@@ -192,8 +194,9 @@ class DocumentService:
         await self.doc_repo.update_status(
             document_id=document_id,
             status=DocumentStatus.PENDING,
-            error_message=None,
+            error_message="Queued for re-processing...",
         )
+        await self.db.commit()
 
-        background_tasks.add_task(process_document_pipeline, document.id if 'document' in locals() else doc.id, user_id)
+        background_tasks.add_task(process_document_pipeline, doc.id, user_id)
         return DocumentResponse.model_validate(doc)
