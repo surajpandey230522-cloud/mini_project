@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     # Google Gemini AI
     GEMINI_API_KEY: str = ""
     GEMINI_CHAT_MODEL: str = "gemini-2.5-flash"
-    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
+    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
 
     # Storage & Persistence
     CHROMA_PERSIST_DIR: str = "./storage/chroma"

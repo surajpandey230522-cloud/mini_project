@@ -24,6 +24,7 @@ import {
   Cpu,
   ArrowRight,
   Clock,
+  RefreshCw,
 } from "lucide-react";
 
 interface ChatAreaProps {
@@ -42,8 +43,11 @@ export function ChatArea({
     documents,
     completedDocs,
     processingDocs,
+    failedDocs,
     selectedDocIds,
     uploading,
+    retryDocument,
+    deleteDocument,
   } = useDocuments();
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -275,6 +279,36 @@ export function ChatArea({
                   <p className="text-[11px] text-slate-600">Indexing 768-dim vectors for cosine similarity</p>
                 </div>
               </div>
+            </div>
+          </div>
+        ) : !isCurrentlyProcessing && selectedDocIds.length === 0 && failedDocs.length > 0 && completedDocs.length === 0 ? (
+          /* Processing Failed Screen */
+          <div className="max-w-xl mx-auto py-12 px-4 text-center animate-in fade-in">
+            <div className="w-16 h-16 rounded-3xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto mb-4">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-white tracking-tight">
+              Document Processing Failed
+            </h3>
+            <p className="text-xs font-mono text-rose-300 mt-1 max-w-sm mx-auto truncate px-3 py-1 rounded-lg bg-rose-950/60 border border-rose-800/40">
+              {failedDocs[0].original_filename}
+            </p>
+            <p className="text-sm text-slate-300 mt-3 max-w-md mx-auto leading-relaxed">
+              {failedDocs[0].error_message || "The document could not be processed. It may be an image-only scan or corrupted."}
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                onClick={() => retryDocument(failedDocs[0].id)}
+                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Retry Processing
+              </button>
+              <button
+                onClick={() => deleteDocument(failedDocs[0].id, failedDocs[0].original_filename)}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold"
+              >
+                Delete & Upload Another
+              </button>
             </div>
           </div>
         ) : messages.length === 0 ? (

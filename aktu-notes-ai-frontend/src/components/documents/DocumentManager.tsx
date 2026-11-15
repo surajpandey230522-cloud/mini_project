@@ -29,6 +29,7 @@ export function DocumentManager() {
     uploading,
     uploadDocument,
     deleteDocument,
+    retryDocument,
     toggleSelectDoc,
     selectAllCompleted,
     clearSelection,
@@ -255,8 +256,17 @@ export function DocumentManager() {
                     </div>
                   </div>
 
-                  {/* Actions (Download / Delete) */}
+                  {/* Actions (Download / Retry / Delete) */}
                   <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
+                    {isFailed && (
+                      <button
+                        onClick={() => retryDocument(doc.id)}
+                        title="Retry processing"
+                        className="p-1 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-slate-800 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <a
                       href={api.documents.downloadUrl(doc.id)}
                       target="_blank"

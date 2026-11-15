@@ -85,11 +85,22 @@ async def process_document_pipeline(document_id: uuid.UUID, user_id: uuid.UUID) 
         except Exception as e:
             error_msg = str(e)
             logger.error(f"Pipeline error processing document {document_id}: {error_msg}")
-            # Mark document as failed
-            await doc_repo.update_status(
-                document_id=document_id,
-                status=DocumentStatus.FAILED,
-                error_message=error_msg[:1000],  # Truncate to safe length
-            )
-            await db.commit()
+            try:
+                await db.rollback()
+            except Exception:
+                pass
+
+            # Open a fresh isolated database session to reliably record failure status
+            try:
+                async with db_session_module.async_session_maker() as fail_db:
+                    fail_repo = DocumentRepository(fail_db)
+                    await fail_repo.update_status(
+                        document_id=document_id,
+                        status=DocumentStatus.FAILED,
+                        error_message=error_msg[:1000],
+                    )
+                    await fail_db.commit()
+                    logger.info(f"Marked document {document_id} as FAILED: {error_msg[:200]}")
+            except Exception as record_err:
+                logger.error(f"Failed to record failure status for doc {document_id}: {record_err}")
 

@@ -50,6 +50,22 @@ class DocumentRepository:
         result = await self.db.execute(stmt)
         items = list(result.scalars().all())
 
+        # Auto-recover orphaned documents stuck in pending/processing for > 3 minutes
+        now = datetime.now(timezone.utc)
+        updated_any = False
+        for item in items:
+            if item.status in (DocumentStatus.PROCESSING.value, DocumentStatus.PENDING.value):
+                created_at = item.created_at
+                if created_at.tzinfo is None:
+                    created_at = created_at.replace(tzinfo=timezone.utc)
+                if (now - created_at).total_seconds() > 180:
+                    item.status = DocumentStatus.FAILED.value
+                    item.error_message = "Processing timed out. Please delete and re-upload your document."
+                    updated_any = True
+
+        if updated_any:
+            await self.db.commit()
+
         return items, total
 
     async def create(

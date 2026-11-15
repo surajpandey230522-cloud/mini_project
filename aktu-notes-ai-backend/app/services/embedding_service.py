@@ -51,25 +51,51 @@ class EmbeddingService:
 
         try:
             from google.genai import types
-            
-            # Use task_type if supported by model config
-            config = types.EmbedContentConfig(
-                task_type=task_type,
-            ) if hasattr(types, "EmbedContentConfig") else None
+
+            # Request 768 dimensions explicitly for pgvector compatibility
+            config = None
+            if hasattr(types, "EmbedContentConfig"):
+                try:
+                    config = types.EmbedContentConfig(
+                        task_type=task_type,
+                        output_dimensionality=768,
+                    )
+                except Exception:
+                    config = types.EmbedContentConfig(task_type=task_type)
 
             kwargs = {"model": self.model, "contents": texts}
             if config:
                 kwargs["config"] = config
 
-            response = self._client.models.embed_content(**kwargs)
-            
+            try:
+                response = self._client.models.embed_content(**kwargs)
+            except Exception as model_err:
+                # If model failed with current model, try fallback to text-embedding-004
+                if self.model != "text-embedding-004":
+                    logger.warning(f"Embedding failed with {self.model}: {model_err}. Retrying with text-embedding-004.")
+                    kwargs["model"] = "text-embedding-004"
+                    response = self._client.models.embed_content(**kwargs)
+                else:
+                    raise
+
             # Response contains list of ContentEmbedding objects
             embeddings = []
             if hasattr(response, "embeddings") and response.embeddings:
                 for item in response.embeddings:
-                    embeddings.append(list(item.values))
+                    vals = list(item.values)
+                    # Enforce strictly 768 dimensions
+                    if len(vals) > 768:
+                        vals = vals[:768]
+                    elif len(vals) < 768:
+                        vals = vals + [0.0] * (768 - len(vals))
+                    embeddings.append(vals)
             elif hasattr(response, "embedding") and response.embedding:
-                embeddings.append(list(response.embedding.values))
+                vals = list(response.embedding.values)
+                if len(vals) > 768:
+                    vals = vals[:768]
+                elif len(vals) < 768:
+                    vals = vals + [0.0] * (768 - len(vals))
+                embeddings.append(vals)
             else:
                 raise ExternalServiceError("Unexpected empty response from Gemini embedding API")
 

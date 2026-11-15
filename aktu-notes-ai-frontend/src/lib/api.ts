@@ -212,6 +212,11 @@ export const api = {
         method: "DELETE",
       }),
 
+    retry: (documentId: string) =>
+      apiFetch<DocumentItem>(`/api/v1/documents/${documentId}/retry`, {
+        method: "POST",
+      }),
+
     downloadUrl: (documentId: string) =>
       `${API_BASE_URL}/api/v1/documents/${documentId}/download`,
   },

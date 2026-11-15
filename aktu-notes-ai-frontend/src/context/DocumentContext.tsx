@@ -23,6 +23,7 @@ interface DocumentContextType {
   uploading: boolean;
   uploadDocument: (file: File) => Promise<boolean>;
   deleteDocument: (id: string, filename: string) => Promise<void>;
+  retryDocument: (id: string) => Promise<void>;
   toggleSelectDoc: (id: string) => void;
   selectAllCompleted: () => void;
   clearSelection: () => void;
@@ -192,6 +193,17 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const retryDocument = async (id: string) => {
+    try {
+      info("Retrying text extraction and embedding generation...");
+      await api.documents.retry(id);
+      prevProcessingIdsRef.current.add(id);
+      await refreshDocuments(true);
+    } catch (err: any) {
+      error(err.message || "Failed to retry document processing.");
+    }
+  };
+
   const toggleSelectDoc = (id: string) => {
     // Only completed documents can be selected
     const doc = documents.find((d) => d.id === id);
@@ -225,6 +237,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
         uploading,
         uploadDocument,
         deleteDocument,
+        retryDocument,
         toggleSelectDoc,
         selectAllCompleted,
         clearSelection,
