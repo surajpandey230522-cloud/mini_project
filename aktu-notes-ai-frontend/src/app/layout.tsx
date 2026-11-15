@@ -5,9 +5,9 @@ import { ToastProvider } from "@/context/ToastContext";
 import { DocumentProvider } from "@/context/DocumentContext";
 
 export const metadata: Metadata = {
-  title: "AKTU Notes AI — Chat With Your Notes & Quantum PDFs",
+  title: "NoteFlow AI — Chat With Your Documents",
   description:
-    "AI-powered Retrieval Augmented Generation (RAG) assistant for AKTU university students with verified page-number citations powered by Google Gemini and NeonDB pgvector.",
+    "AI-powered document assistant that answers your questions with verified page-level citations. Upload any PDF and get instant, grounded answers powered by Google Gemini.",
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full dark antialiased">
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 font-sans">
+      <body className="min-h-full flex flex-col bg-[#030712] text-slate-100 font-sans">
         <ToastProvider>
           <AuthProvider>
             <DocumentProvider>{children}</DocumentProvider>

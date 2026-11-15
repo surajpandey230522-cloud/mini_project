@@ -10,22 +10,19 @@ import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
 import { DocumentManager } from "@/components/documents/DocumentManager";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { ChatArea } from "@/components/chat/ChatArea";
-import { FolderOpen, MessageSquare, Loader2 } from "lucide-react";
+import { Database, MessageSquare, Loader2, Zap } from "lucide-react";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const { selectedDocIds, processingDocs } = useDocuments();
 
-  // Modals state
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"login" | "register">("login");
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
-  // App interaction state
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [refreshConvTrigger, setRefreshConvTrigger] = useState(0);
 
-  // Responsive Drawer Toggles for Mobile / Smaller screens
   const [showDocsMobile, setShowDocsMobile] = useState(false);
   const [showChatsMobile, setShowChatsMobile] = useState(false);
 
@@ -41,17 +38,21 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-slate-950 text-slate-400">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center animate-pulse mb-3">
-          <span className="text-indigo-400 font-bold text-lg">AI</span>
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-[#030712] text-slate-400">
+        <div className="relative w-12 h-12 mb-4">
+          <div className="absolute inset-0 rounded-2xl bg-indigo-600/15 animate-pulse" />
+          <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-600/25">
+            <Zap className="w-6 h-6 text-white" fill="white" />
+          </div>
         </div>
-        <p className="text-xs font-medium">Initializing AKTU Notes AI...</p>
+        <p className="text-xs text-slate-600 font-medium tracking-wider uppercase">Loading NoteFlow AI</p>
+        <Loader2 className="w-4 h-4 animate-spin text-indigo-500/50 mt-3" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-950">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#030712]">
       {/* Top Navigation */}
       <Navbar
         onOpenAuth={openAuth}
@@ -64,40 +65,44 @@ export default function Home() {
           <HeroSection onOpenAuth={openAuth} />
         ) : (
           <div className="flex-1 flex w-full h-full overflow-hidden">
-            {/* Mobile Bar for toggling panels */}
-            <div className="md:hidden absolute top-14 left-0 right-0 z-20 flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 text-xs">
+            {/* Mobile toggle bar */}
+            <div className="md:hidden absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 py-1.5 bg-[#030712]/90 border-b border-slate-800/40 text-xs">
               <button
-                onClick={() => setShowDocsMobile(!showDocsMobile)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 font-medium"
+                onClick={() => { setShowDocsMobile(!showDocsMobile); setShowChatsMobile(false); }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                  showDocsMobile ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-900/60 text-slate-400 border border-slate-800/40"
+                }`}
               >
-                <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
-                Notes ({selectedDocIds.length} ready)
+                <Database className="w-3.5 h-3.5" />
+                Docs ({selectedDocIds.length})
                 {processingDocs.length > 0 && (
                   <Loader2 className="w-3 h-3 text-amber-400 animate-spin ml-0.5" />
                 )}
               </button>
               <button
-                onClick={() => setShowChatsMobile(!showChatsMobile)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 font-medium"
+                onClick={() => { setShowChatsMobile(!showChatsMobile); setShowDocsMobile(false); }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                  showChatsMobile ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-900/60 text-slate-400 border border-slate-800/40"
+                }`}
               >
-                <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                <MessageSquare className="w-3.5 h-3.5" />
                 Chats
               </button>
             </div>
 
-            {/* Left Column: Academic Notes & PDFs Manager */}
+            {/* Left: Document Manager */}
             <aside
               className={`${
-                showDocsMobile ? "fixed inset-y-16 left-0 z-30 w-80 shadow-2xl" : "hidden"
+                showDocsMobile ? "fixed inset-y-14 left-0 z-30 w-80 shadow-2xl shadow-black/60" : "hidden"
               } md:block md:relative md:w-80 h-full shrink-0`}
             >
               <DocumentManager />
             </aside>
 
-            {/* Middle Column: Chat Conversations Sidebar */}
+            {/* Middle: Conversation Sidebar */}
             <aside
               className={`${
-                showChatsMobile ? "fixed inset-y-16 right-0 z-30 w-72 shadow-2xl" : "hidden"
+                showChatsMobile ? "fixed inset-y-14 right-0 z-30 w-72 shadow-2xl shadow-black/60" : "hidden"
               } lg:block lg:relative lg:w-64 h-full shrink-0`}
             >
               <ConversationSidebar
@@ -110,7 +115,7 @@ export default function Home() {
               />
             </aside>
 
-            {/* Right Column: Interactive Chat & RAG QA Area */}
+            {/* Right: Chat Area */}
             <section className="flex-1 flex flex-col h-full overflow-hidden">
               <ChatArea
                 conversationId={activeConversationId}
@@ -121,14 +126,12 @@ export default function Home() {
         )}
       </main>
 
-      {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         initialMode={authModalMode}
       />
 
-      {/* Change Password Modal */}
       <ChangePasswordModal
         isOpen={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}

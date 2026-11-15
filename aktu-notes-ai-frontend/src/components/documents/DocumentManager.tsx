@@ -7,7 +7,6 @@ import {
   FileText,
   UploadCloud,
   CheckCircle2,
-  Clock,
   AlertTriangle,
   Trash2,
   Download,
@@ -15,7 +14,7 @@ import {
   CheckSquare,
   Square,
   RefreshCw,
-  FolderOpen,
+  Database,
   Sparkles,
 } from "lucide-react";
 
@@ -63,37 +62,36 @@ export function DocumentManager() {
     completedDocs.every((d) => selectedDocIds.includes(d.id));
 
   return (
-    <div className="flex flex-col h-full bg-slate-950/60 border-r border-slate-800/80 p-4">
+    <div className="flex flex-col h-full bg-[#030712]/80 border-r border-slate-800/50 p-4">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800/60">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/40">
         <div className="flex items-center gap-2">
-          <FolderOpen className="w-5 h-5 text-indigo-400" />
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-            Academic Notes & PDFs
+          <div className="w-6 h-6 rounded-lg bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center">
+            <Database className="w-3.5 h-3.5 text-indigo-400" />
+          </div>
+          <h2 className="text-xs font-bold text-slate-200 uppercase tracking-widest">
+            Knowledge Base
           </h2>
         </div>
         <button
           onClick={() => refreshDocuments(false)}
-          title="Refresh documents"
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          title="Refresh"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-indigo-400" : ""}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-indigo-400" : ""}`} />
         </button>
       </div>
 
       {/* Upload Drop Zone */}
       <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragActive(true);
-        }}
+        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
         onDragLeave={() => setDragActive(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`mt-4 p-4 rounded-2xl border-2 border-dashed cursor-pointer text-center transition-all ${
+        className={`mt-4 p-4 rounded-2xl border-2 border-dashed cursor-pointer text-center transition-all duration-200 ${
           dragActive
-            ? "border-indigo-500 bg-indigo-500/10 scale-[1.01]"
-            : "border-slate-800 hover:border-slate-700 bg-slate-900/40 hover:bg-slate-900/70"
+            ? "border-indigo-500 bg-indigo-500/8 scale-[1.02] glow-indigo"
+            : "border-slate-800/60 hover:border-indigo-500/40 bg-slate-900/30 hover:bg-slate-900/50"
         }`}
       >
         <input
@@ -112,20 +110,22 @@ export function DocumentManager() {
         <div className="flex flex-col items-center gap-2">
           {uploading ? (
             <>
-              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-              <p className="text-xs font-semibold text-indigo-300">Uploading PDF...</p>
+              <div className="w-9 h-9 rounded-xl bg-indigo-600/15 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+              </div>
+              <p className="text-xs font-semibold text-indigo-300">Uploading...</p>
             </>
           ) : (
             <>
-              <div className="w-10 h-10 rounded-xl bg-indigo-600/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                <UploadCloud className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 transition-transform group-hover:scale-110">
+                <UploadCloud className="w-4.5 h-4.5" />
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-200">
-                  Click or drag AKTU notes / Quantum PDF
+                  Drop a PDF here
                 </p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  PDF up to 25MB • PyMuPDF & NeonDB pgvector
+                  or click to browse · up to 25MB
                 </p>
               </div>
             </>
@@ -133,34 +133,36 @@ export function DocumentManager() {
         </div>
       </div>
 
-      {/* Live Processing Notice (if any PDF is currently processing) */}
+      {/* Live Processing Notice */}
       {processingDocs.length > 0 && (
-        <div className="mt-3 p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 animate-pulse">
+        <div className="mt-3 p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-500/20">
           <div className="flex items-center gap-2 text-xs font-semibold text-indigo-300">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 shrink-0" />
-            <span>Processing {processingDocs.length} PDF{processingDocs.length > 1 ? "s" : ""}...</span>
+            <div className="flex gap-0.5">
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-indigo-400 inline-block" />
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-indigo-400 inline-block" />
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-indigo-400 inline-block" />
+            </div>
+            <span>Indexing {processingDocs.length} document{processingDocs.length > 1 ? "s" : ""}</span>
           </div>
-          <p className="text-[11px] text-indigo-200/70 mt-1">
-            Extracting text & generating vector embeddings. Will automatically unlock chat once finished.
+          <p className="text-[11px] text-indigo-200/50 mt-1">
+            Chat unlocks automatically when ready
           </p>
         </div>
       )}
 
       {/* Selection Actions */}
       {completedDocs.length > 0 && (
-        <div className="mt-4 flex items-center justify-between text-xs text-slate-400 px-1">
+        <div className="mt-3.5 flex items-center justify-between text-[11px] text-slate-500 px-0.5">
           <span>
-            {selectedDocIds.length} of {completedDocs.length} ready notes selected
+            <span className="text-indigo-400 font-semibold">{selectedDocIds.length}</span>
+            {" "}/ {completedDocs.length} selected
           </span>
           <button
             onClick={() => {
-              if (allCompletedSelected) {
-                clearSelection();
-              } else {
-                selectAllCompleted();
-              }
+              if (allCompletedSelected) clearSelection();
+              else selectAllCompleted();
             }}
-            className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+            className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
           >
             {allCompletedSelected ? "Deselect All" : "Select All"}
           </button>
@@ -168,18 +170,18 @@ export function DocumentManager() {
       )}
 
       {/* Documents List */}
-      <div className="mt-3 flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+      <div className="mt-3 flex-1 overflow-y-auto space-y-2 pr-0.5 custom-scrollbar">
         {loading && documents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-500 text-xs">
-            <Loader2 className="w-6 h-6 animate-spin text-indigo-400 mb-2" />
-            Loading documents...
+          <div className="flex flex-col items-center justify-center h-40 text-slate-600 text-xs gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-indigo-500/50" />
+            Loading...
           </div>
         ) : documents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-center p-4 border border-dashed border-slate-800/80 rounded-2xl text-slate-500">
-            <FileText className="w-8 h-8 text-slate-600 mb-2" />
-            <p className="text-xs font-medium text-slate-400">No notes uploaded yet</p>
-            <p className="text-[11px] text-slate-600 mt-1">
-              Upload your AKTU Quantum series, handwritten PDFs, or lecture notes to chat!
+          <div className="flex flex-col items-center justify-center h-44 text-center p-4 border border-dashed border-slate-800/50 rounded-2xl text-slate-600">
+            <Sparkles className="w-7 h-7 text-slate-700 mb-2" />
+            <p className="text-xs font-medium text-slate-500">No documents yet</p>
+            <p className="text-[11px] text-slate-700 mt-1 leading-relaxed">
+              Upload a PDF to start chatting with your content
             </p>
           </div>
         ) : (
@@ -192,32 +194,34 @@ export function DocumentManager() {
             return (
               <div
                 key={doc.id}
-                className={`group relative p-3 rounded-2xl border transition-all ${
+                className={`group relative p-3 rounded-xl border transition-all duration-150 ${
                   isProcessing
-                    ? "bg-indigo-950/20 border-indigo-500/40 shadow-sm"
+                    ? "bg-indigo-950/15 border-indigo-500/25"
                     : isSelected
-                    ? "bg-slate-900 border-indigo-500/50 shadow-sm"
-                    : "bg-slate-900/50 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900"
+                    ? "bg-indigo-600/8 border-indigo-500/40 shadow-sm"
+                    : isFailed
+                    ? "bg-rose-950/10 border-rose-500/20"
+                    : "bg-slate-900/30 border-slate-800/40 hover:border-slate-700/60 hover:bg-slate-900/50"
                 }`}
               >
                 <div className="flex items-start gap-2.5">
-                  {/* Select Checkbox for Completed Docs */}
+                  {/* Checkbox / Status Icon */}
                   {isCompleted ? (
                     <button
                       onClick={() => toggleSelectDoc(doc.id)}
-                      title={isSelected ? "Deselect from chat" : "Select for chat"}
-                      className="mt-0.5 text-indigo-400 hover:text-indigo-300 shrink-0"
+                      title={isSelected ? "Deselect" : "Select for chat"}
+                      className="mt-0.5 shrink-0"
                     >
                       {isSelected ? (
-                        <CheckSquare className="w-4 h-4 fill-indigo-500/20" />
+                        <CheckSquare className="w-4 h-4 text-indigo-400 fill-indigo-500/20" />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-600" />
+                        <Square className="w-4 h-4 text-slate-600 hover:text-slate-400 transition-colors" />
                       )}
                     </button>
                   ) : (
-                    <div className="mt-0.5 shrink-0" title="Processing in background...">
+                    <div className="mt-0.5 shrink-0">
                       {isProcessing ? (
-                        <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+                        <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
                       ) : (
                         <AlertTriangle className="w-4 h-4 text-rose-400" />
                       )}
@@ -233,38 +237,32 @@ export function DocumentManager() {
                       {doc.original_filename}
                     </p>
 
-                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400">
+                    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 flex-wrap">
                       <span>{formatFileSize(doc.file_size)}</span>
-                      <span>•</span>
                       {isCompleted && (
                         <>
-                          <span className="text-slate-300">{doc.page_count} pages</span>
-                          <span>•</span>
-                          <span className="text-indigo-300">{doc.chunk_count} chunks</span>
+                          <span>·</span>
+                          <span className="text-slate-400">{doc.page_count}p</span>
+                          <span>·</span>
+                          <span className="text-indigo-400/80">{doc.chunk_count} chunks</span>
                         </>
                       )}
                       {isProcessing && (
-                        <span className="text-amber-400 flex items-center gap-1 font-medium animate-pulse">
-                          <Loader2 className="w-3 h-3 animate-spin text-amber-400 shrink-0" />
-                          <span className="truncate">{doc.error_message || "Processing..."}</span>
-                        </span>
+                        <span className="text-amber-400/80 font-medium animate-pulse">Indexing...</span>
                       )}
                       {isFailed && (
-                        <span className="text-rose-400 font-medium flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
-                          <span>Processing Failed</span>
-                        </span>
+                        <span className="text-rose-400 font-medium">Failed</span>
                       )}
                     </div>
                   </div>
 
-                  {/* Actions (Download / Retry / Delete) */}
-                  <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
+                  {/* Actions */}
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     {isFailed && (
                       <button
                         onClick={() => retryDocument(doc.id)}
-                        title="Retry processing"
-                        className="p-1 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-slate-800 transition-colors"
+                        title="Retry"
+                        className="p-1 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-slate-800/60 transition-colors"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                       </button>
@@ -273,33 +271,25 @@ export function DocumentManager() {
                       href={api.documents.downloadUrl(doc.id)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="Download PDF"
-                      className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                      title="Download"
+                      className="p-1 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
                     >
                       <Download className="w-3.5 h-3.5" />
                     </a>
                     <button
                       onClick={() => deleteDocument(doc.id, doc.original_filename)}
-                      title="Delete document"
-                      className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                      title="Delete"
+                      className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800/60 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
 
+                {/* Error detail */}
                 {isFailed && doc.error_message && (
-                  <div className="mt-2 text-[10px] text-rose-300 bg-rose-950/50 p-2 rounded-xl border border-rose-900/60 break-words leading-relaxed">
-                    <p className="font-semibold text-rose-400 flex items-center gap-1 mb-0.5">
-                      <AlertTriangle className="w-3 h-3 shrink-0" /> Error Details:
-                    </p>
-                    <p>{doc.error_message}</p>
-                  </div>
-                )}
-                {isProcessing && doc.error_message && (
-                  <div className="mt-2 text-[10px] text-indigo-300 bg-indigo-950/40 p-2 rounded-xl border border-indigo-800/40 leading-relaxed flex items-center gap-1.5">
-                    <Loader2 className="w-3 h-3 animate-spin text-indigo-400 shrink-0" />
-                    <span>{doc.error_message}</span>
+                  <div className="mt-2 text-[10px] text-rose-300/80 bg-rose-950/30 p-2 rounded-lg border border-rose-900/40 break-words leading-relaxed">
+                    {doc.error_message}
                   </div>
                 )}
               </div>
