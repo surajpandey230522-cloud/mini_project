@@ -68,9 +68,15 @@ class ChatService:
             {"role": m.role, "content": m.content} for m in recent_messages
         ]
 
-        # 6. Retrieve relevant semantic chunks
+        # 6. Retrieve relevant semantic chunks (contextual query augmentation for short follow-ups)
+        search_query = request.question
+        if formatted_history and len(request.question.split()) < 8:
+            user_history = [m["content"] for m in formatted_history if m.get("role") == "user"]
+            if user_history:
+                search_query = f"{user_history[-1]} {request.question}"
+
         retrieved_chunks = await self.retrieval_service.retrieve_context(
-            question=request.question,
+            question=search_query,
             user_id=user_id,
             document_ids=request.document_ids,
             db=self.db,
