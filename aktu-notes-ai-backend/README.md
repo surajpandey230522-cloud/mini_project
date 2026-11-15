@@ -384,9 +384,44 @@ pytest --cov=app tests/
 
 ---
 
-## 13. Docker & Deployment
+## 13. Deployment: Render + NeonDB + Vercel Frontend
 
-Deploy the entire stack with PostgreSQL and backend using Docker Compose:
+### A. Database: NeonDB (Serverless PostgreSQL)
+1. Sign up / log in to [Neon.tech](https://neon.tech).
+2. Create a new PostgreSQL project (e.g. `aktu-notes-db`).
+3. Under the **Dashboard**, copy your connection string (`Connection details`).
+4. Paste it as `DATABASE_URL` in your environment variables.
+   - Example: `postgresql+psycopg://neondb_owner:YOUR_PASSWORD@ep-sample-123456.us-east-2.aws.neon.tech/neondb?sslmode=require`
+   - *Note: If Neon gives you `postgres://` or `postgresql://` without `+psycopg`, the backend automatically normalizes the prefix to `postgresql+psycopg://`.*
+
+### B. Backend: Render Web Service
+1. Create a new **Web Service** on [Render.com](https://render.com) and link your repository.
+2. Select **Python** as the runtime.
+3. Configure the build and start settings:
+   - **Build Command:** `./build.sh` (or `bash build.sh`)
+   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. Add the following **Environment Variables** in the Render Dashboard:
+   - `APP_ENV`: `production`
+   - `DATABASE_URL`: *(Your NeonDB connection string from Step A)*
+   - `JWT_SECRET_KEY`: *(Generate a secure random string with 32+ characters)*
+   - `GEMINI_API_KEY`: *(Your Google AI Studio API key)*
+   - `GEMINI_CHAT_MODEL`: `gemini-2.5-flash`
+   - `GEMINI_EMBEDDING_MODEL`: `gemini-embedding-001`
+   - `CORS_ORIGINS`: `https://your-app.vercel.app,http://localhost:5173,http://localhost:3000`
+   - `CORS_ALLOW_ORIGIN_REGEX`: `^https:\/\/.*\.vercel\.app$`
+5. Click **Create Web Service**. Render will automatically run `build.sh` to install dependencies and execute `alembic upgrade head` to set up tables on NeonDB!
+
+### C. Frontend: Vercel Integration & CORS
+- The backend comes pre-configured with CORS for:
+  - Exact production URLs in `CORS_ORIGINS` (e.g. `https://your-frontend.vercel.app`)
+  - All Vercel preview branch deployments automatically matched by `CORS_ALLOW_ORIGIN_REGEX=^https:\/\/.*\.vercel\.app$`
+  - Local Vite / React / Next.js development servers (`http://localhost:5173`, `http://localhost:3000`)
+
+---
+
+## 14. Docker Local Deployment
+
+Deploy the entire stack with local PostgreSQL and backend using Docker Compose:
 
 ```bash
 docker compose up -d --build
@@ -400,7 +435,7 @@ docker compose logs -f backend
 
 ---
 
-## 14. Troubleshooting
+## 15. Troubleshooting
 
 1. **`PDFExtractionError: Encrypted or password-protected PDFs are not supported`**
    - Ensure uploaded PDF documents are not password locked.

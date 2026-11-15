@@ -123,3 +123,30 @@ def test_path_traversal_sanitization():
         assert ".." not in cleaned
         assert cleaned.endswith(".pdf")
 
+
+@pytest.mark.asyncio
+async def test_vercel_cors_origin_allowed(client: AsyncClient):
+    """Verify that Vercel frontend origins are permitted by CORS headers."""
+    headers = {
+        "Origin": "https://aktu-notes-frontend.vercel.app",
+        "Access-Control-Request-Method": "GET",
+    }
+    response = await client.options("/health", headers=headers)
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "https://aktu-notes-frontend.vercel.app"
+
+
+def test_neondb_url_normalization():
+    """Verify that NeonDB postgres URLs are automatically converted to postgresql+psycopg driver scheme."""
+    from app.core.config import Settings
+    
+    neon_url = "postgres://neondb_owner:npg_12345@ep-sweet-sample-123456.us-east-2.aws.neon.tech/neondb?sslmode=require"
+    s1 = Settings(DATABASE_URL=neon_url)
+    assert s1.DATABASE_URL.startswith("postgresql+psycopg://")
+    assert "sslmode=require" in s1.DATABASE_URL
+
+    neon_url2 = "postgresql://user:pass@ep-sample.neon.tech/db"
+    s2 = Settings(DATABASE_URL=neon_url2)
+    assert s2.DATABASE_URL.startswith("postgresql+psycopg://")
+
+

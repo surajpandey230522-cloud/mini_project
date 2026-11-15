@@ -1,7 +1,7 @@
 """Application configuration using Pydantic Settings."""
 
 from functools import lru_cache
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,8 +19,22 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEBUG: bool = False
 
-    # Database
+    # Database (supports NeonDB, PostgreSQL, and SQLite)
     DATABASE_URL: str = "postgresql+psycopg://user:password@localhost:5432/aktu_notes"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: str) -> str:
+        """Normalize NeonDB / Render connection string to use the psycopg driver."""
+        if not isinstance(v, str) or not v:
+            return v
+        cleaned = v.strip()
+        # Render / Neon default URLs often start with postgres:// or postgresql://
+        if cleaned.startswith("postgres://"):
+            cleaned = cleaned.replace("postgres://", "postgresql+psycopg://", 1)
+        elif cleaned.startswith("postgresql://") and not cleaned.startswith("postgresql+"):
+            cleaned = cleaned.replace("postgresql://", "postgresql+psycopg://", 1)
+        return cleaned
 
     # Security & JWT
     JWT_SECRET_KEY: str = "default_secret_key_change_in_production_min_32_characters"
@@ -47,8 +61,9 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP_TOKENS: int = 100
     RAG_TOP_K: int = 3
 
-    # CORS
+    # CORS Settings (Supports local dev, custom domains, and Vercel deployments)
     CORS_ORIGINS: Union[str, List[str]] = "http://localhost:5173,http://localhost:3000"
+    CORS_ALLOW_ORIGIN_REGEX: Optional[str] = r"^https:\/\/.*\.vercel\.app$"
 
     # Rate Limiting
     RATE_LIMIT_LOGIN: str = "10/minute"
@@ -72,4 +87,3 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Cached settings singleton."""
     return Settings()
-
