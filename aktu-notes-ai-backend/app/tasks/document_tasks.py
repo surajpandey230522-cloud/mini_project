@@ -67,8 +67,8 @@ async def process_document_pipeline(document_id: uuid.UUID, user_id: uuid.UUID) 
             # 4. Generate embeddings via Gemini Embedding model
             embeddings = await embedding_service.embed_documents(chunk_texts)
 
-            # 5. Index into ChromaDB vector database
-            await vector_service.insert_chunks(chunks, embeddings)
+            # 5. Index into NeonDB pgvector
+            await vector_service.insert_chunks(chunks, embeddings, db=db)
 
             # 6. Mark document as completed
             await doc_repo.update_status(

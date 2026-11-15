@@ -1,7 +1,7 @@
 """Semantic retrieval service coordinating query embedding and vector search."""
 
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from app.core.config import get_settings
 from app.core.exceptions import RAGError
 from app.core.logging import logger
@@ -24,6 +24,7 @@ class RetrievalService:
         user_id: uuid.UUID,
         document_ids: List[uuid.UUID],
         top_k: int = settings.RAG_TOP_K,
+        db: Optional[Any] = None,
     ) -> List[Dict[str, Any]]:
         """Generate query vector and retrieve top relevant chunks from authorized documents."""
         if not document_ids:
@@ -38,6 +39,7 @@ class RetrievalService:
             user_id=user_id,
             document_ids=document_ids,
             top_k=top_k,
+            db=db,
         )
 
         formatted_chunks: List[Dict[str, Any]] = []

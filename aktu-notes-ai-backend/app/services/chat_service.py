@@ -73,6 +73,7 @@ class ChatService:
             question=request.question,
             user_id=user_id,
             document_ids=request.document_ids,
+            db=self.db,
         )
 
         context_block = self.retrieval_service.build_context_block(retrieved_chunks)

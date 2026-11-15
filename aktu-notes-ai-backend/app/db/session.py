@@ -3,6 +3,7 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from app.core.config import get_settings
+from app.core.logging import logger
 
 settings = get_settings()
 
@@ -22,7 +23,15 @@ else:
         "pool_recycle": 3600,
     })
 
-engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
+try:
+    engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
+except Exception as e:
+    logger.warning(
+        f"Could not load database driver for '{settings.DATABASE_URL}': {e}. "
+        "Falling back to local SQLite database for development."
+    )
+    fallback_url = "sqlite+aiosqlite:///./storage/local_dev.db"
+    engine = create_async_engine(fallback_url, connect_args={"check_same_thread": False})
 
 async_session_maker = async_sessionmaker(
     bind=engine,

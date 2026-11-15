@@ -6,9 +6,9 @@
 
 ## 1. Project Overview
 
-**AKTU Notes AI** is a specialized academic RAG backend powered by **FastAPI**, **PostgreSQL**, **ChromaDB**, and **Google Gemini 2.5 Flash**. 
+**AKTU Notes AI** is a specialized academic RAG backend powered by **FastAPI**, **NeonDB PostgreSQL with pgvector**, and **Google Gemini 2.5 Flash**. 
 
-Students upload complex academic PDFs (such as AKTU syllabus notes, Quantum series problem sets, and lab manuals) and query them through interactive conversational sessions. The backend retrieves the most relevant semantic passages from authorized documents and generates answers grounded strictly in the source material, providing exact PDF filename and page number citations to eliminate hallucinations.
+Students upload complex academic PDFs (such as AKTU syllabus notes, Quantum series problem sets, and lab manuals) and query them through interactive conversational sessions. The backend retrieves the most relevant semantic passages from authorized documents using vector similarity search in Neon PostgreSQL and generates answers grounded strictly in the source material, providing exact PDF filename and page number citations to eliminate hallucinations.
 
 ---
 
@@ -32,8 +32,10 @@ Students upload complex academic PDFs (such as AKTU syllabus notes, Quantum seri
 
 - **Vector Search & RAG Architecture:**
   - Semantic text chunking respecting paragraph and sentence boundaries.
-  - Persistent vector storage using **ChromaDB** with cosine distance metrics.
-  - Unified vector collection strictly filtered by `user_id` and authorized `document_ids`.
+  - Native **PostgreSQL `pgvector`** storage directly in NeonDB (`document_chunks` table).
+  - High-performance cosine distance index with 768-dimensional embeddings.
+  - Unified vector storage strictly filtered by `user_id` and authorized `document_ids`.
+  - Zero separate vector server or persistent disk dependencies for vector data — everything lives safely in NeonDB.
   - Official **Google Gemini SDK** integration for embeddings and answer generation.
   - Strict academic system instructions forbidding fact fabrication or citation hallucination.
   - Citation validation: The backend matches returned chunk references against actual retrieved passages, stripping any unverified citations.
@@ -42,7 +44,7 @@ Students upload complex academic PDFs (such as AKTU syllabus notes, Quantum seri
   - Persistent multi-turn conversations stored in PostgreSQL.
   - Document association per conversation.
   - Multi-message context memory for follow-up questions.
-  - Cascading deletion of documents (removes physical files, ChromaDB vectors, and DB records).
+  - Cascading deletion of documents (removes physical files, DB records, and vector embeddings in a single atomic flow).
 
 ---
 
@@ -57,7 +59,7 @@ Students upload complex academic PDFs (such as AKTU syllabus notes, Quantum seri
 | **Authentication** | JWT & Argon2id | PyJWT / argon2-cffi |
 | **AI LLM** | Google Gemini 2.5 Flash | `google-genai` SDK (`gemini-2.5-flash`) |
 | **Vector Embeddings** | Gemini Embeddings | `google-genai` SDK (`gemini-embedding-001`) |
-| **Vector Database** | ChromaDB | Persistent ChromaDB (`hnsw:space: cosine`) |
+| **Vector Database** | NeonDB `pgvector` | PostgreSQL `vector(768)` with cosine distance |
 | **PDF Extraction** | PyMuPDF | PyMuPDF (`fitz`) |
 | **Rate Limiting** | SlowAPI | slowapi 0.1.9+ |
 | **Testing** | Pytest & HTTPX | pytest / pytest-asyncio / httpx |
@@ -69,18 +71,20 @@ Students upload complex academic PDFs (such as AKTU syllabus notes, Quantum seri
 
 ```mermaid
 flowchart TD
-    Client["Client (Web / Mobile / Postman)"]
+    Client["Client (Web / Mobile / Postman / Vercel Frontend)"]
     
-    subgraph FastAPI["FastAPI Backend (/api/v1)"]
-        AuthMiddleware["JWT & Bearer Auth / Rate Limiter"]
+    subgraph FastAPI["FastAPI Backend on Render (/api/v1)"]
+        AuthMiddleware["JWT & Bearer Auth / Rate Limiter / CORS"]
         Routers["Routers (Auth, Users, Docs, Chats)"]
         Services["Services (PDF, Chunking, Vector, RAG, Gemini)"]
     end
     
-    subgraph Storage["Persistence & AI Services"]
-        PG[("PostgreSQL\n(Users, Docs, Chats, Tokens)")]
-        Disk[("Local Storage\n(storage/uploads)")]
-        Chroma[("ChromaDB\n(storage/chroma)")]
+    subgraph NeonDB["NeonDB Serverless PostgreSQL"]
+        PG[("Relational Data\n(Users, Docs, Chats, Tokens)")]
+        Vectors[("pgvector Extension\n(document_chunks - 768 dims)")]
+    end
+
+    subgraph External["External Cloud & AI"]
         Gemini["Google Gemini AI\n(Embeddings & Gemini 2.5 Flash)"]
     end
     
@@ -88,8 +92,7 @@ flowchart TD
     AuthMiddleware --> Routers
     Routers --> Services
     Services --> PG
-    Services --> Disk
-    Services --> Chroma
+    Services --> Vectors
     Services --> Gemini
 ```
 

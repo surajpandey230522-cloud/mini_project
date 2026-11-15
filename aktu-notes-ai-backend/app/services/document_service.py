@@ -158,8 +158,8 @@ class DocumentService:
         if doc.user_id != user_id:
             raise PermissionDeniedError("You do not have permission to delete this document.")
 
-        # 1. Delete ChromaDB vectors
-        await self.vector_service.delete_document_vectors(user_id, document_id)
+        # 1. Delete pgvector embeddings
+        await self.vector_service.delete_document_vectors(user_id, document_id, db=self.db)
 
         # 2. Delete physical file
         path = Path(doc.storage_path)

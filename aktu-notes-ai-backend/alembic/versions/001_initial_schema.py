@@ -1,4 +1,4 @@
-"""Initial schema with users, tokens, documents, conversations, and messages.
+"""Initial schema with users, tokens, documents, chunks with pgvector, conversations, and messages.
 
 Revision ID: 001_initial_schema
 Revises: 
@@ -9,6 +9,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+import pgvector.sqlalchemy
 
 # revision identifiers, used by Alembic.
 revision: str = '001_initial_schema'
@@ -18,6 +19,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # 0. Enable pgvector extension on PostgreSQL (NeonDB)
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+
     # 1. users table
     op.create_table(
         'users',
@@ -82,7 +88,29 @@ def upgrade() -> None:
     op.create_index(op.f('ix_documents_status'), 'documents', ['status'], unique=False)
     op.create_index(op.f('ix_documents_user_id'), 'documents', ['user_id'], unique=False)
 
-    # 5. conversations table
+    # 5. document_chunks table with pgvector embeddings
+    op.create_table(
+        'document_chunks',
+        sa.Column('id', sa.UUID(), nullable=False),
+        sa.Column('chunk_id', sa.String(length=100), nullable=False),
+        sa.Column('document_id', sa.UUID(), nullable=False),
+        sa.Column('user_id', sa.UUID(), nullable=False),
+        sa.Column('filename', sa.String(length=500), nullable=False),
+        sa.Column('page_number', sa.Integer(), nullable=False),
+        sa.Column('page_range', sa.JSON(), nullable=False),
+        sa.Column('chunk_index', sa.Integer(), nullable=False),
+        sa.Column('text', sa.Text(), nullable=False),
+        sa.Column('embedding', pgvector.sqlalchemy.Vector(768).with_variant(sa.JSON(), 'sqlite'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.ForeignKeyConstraint(['document_id'], ['documents.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    op.create_index(op.f('ix_document_chunks_chunk_id'), 'document_chunks', ['chunk_id'], unique=True)
+    op.create_index(op.f('ix_document_chunks_document_id'), 'document_chunks', ['document_id'], unique=False)
+    op.create_index(op.f('ix_document_chunks_user_id'), 'document_chunks', ['user_id'], unique=False)
+
+    # 6. conversations table
     op.create_table(
         'conversations',
         sa.Column('id', sa.UUID(), nullable=False),
@@ -95,7 +123,7 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_conversations_user_id'), 'conversations', ['user_id'], unique=False)
 
-    # 6. conversation_documents association table
+    # 7. conversation_documents association table
     op.create_table(
         'conversation_documents',
         sa.Column('conversation_id', sa.UUID(), nullable=False),
@@ -105,7 +133,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('conversation_id', 'document_id'),
     )
 
-    # 7. messages table
+    # 8. messages table
     op.create_table(
         'messages',
         sa.Column('id', sa.UUID(), nullable=False),
@@ -124,8 +152,8 @@ def downgrade() -> None:
     op.drop_table('messages')
     op.drop_table('conversation_documents')
     op.drop_table('conversations')
+    op.drop_table('document_chunks')
     op.drop_table('documents')
     op.drop_table('password_reset_tokens')
     op.drop_table('refresh_tokens')
     op.drop_table('users')
-

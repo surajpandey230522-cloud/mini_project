@@ -61,9 +61,10 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP_TOKENS: int = 100
     RAG_TOP_K: int = 3
 
-    # CORS Settings (Supports local dev, custom domains, and Vercel deployments)
-    CORS_ORIGINS: Union[str, List[str]] = "http://localhost:5173,http://localhost:3000"
-    CORS_ALLOW_ORIGIN_REGEX: Optional[str] = r"^https:\/\/.*\.vercel\.app$"
+    # CORS Settings (Allow all origins enabled by default)
+    CORS_ORIGIN_ALL: bool = True
+    CORS_ORIGINS: Union[str, List[str]] = "*"
+    CORS_ALLOW_ORIGIN_REGEX: Optional[str] = None
 
     # Rate Limiting
     RATE_LIMIT_LOGIN: str = "10/minute"
@@ -72,11 +73,15 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
+        if self.CORS_ORIGIN_ALL:
+            return ["*"]
         if isinstance(self.CORS_ORIGINS, list):
             return self.CORS_ORIGINS
         if isinstance(self.CORS_ORIGINS, str):
+            if self.CORS_ORIGINS.strip() == "*":
+                return ["*"]
             return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
-        return ["http://localhost:5173"]
+        return ["*"]
 
     @property
     def max_upload_size_bytes(self) -> int:

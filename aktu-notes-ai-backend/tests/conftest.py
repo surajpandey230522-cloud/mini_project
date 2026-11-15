@@ -21,9 +21,17 @@ os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 from app.core.config import get_settings
 from app.core.dependencies import get_db
 from app.core.security import create_access_token, get_password_hash
-from app.db.base import Base
+from app.models import (
+    Base,
+    User,
+    Document,
+    DocumentChunk,
+    Conversation,
+    Message,
+    RefreshToken,
+    PasswordResetToken,
+)
 from app.main import app as fastapi_app
-from app.models.user import User
 
 # Temporary directories for uploads, ChromaDB, and DB during tests
 temp_test_dir = tempfile.mkdtemp(prefix="aktu_test_")

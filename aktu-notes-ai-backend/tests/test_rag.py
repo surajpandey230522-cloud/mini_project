@@ -74,8 +74,8 @@ def test_chunking_service():
 
 
 @pytest.mark.asyncio
-async def test_vector_indexing_and_similarity_search():
-    """Test inserting embeddings into ChromaDB and retrieving by cosine similarity."""
+async def test_vector_indexing_and_similarity_search(db_session):
+    """Test inserting embeddings into NeonDB pgvector and retrieving by cosine similarity."""
     vector_service = VectorService()
     embedding_service = EmbeddingService()
 
