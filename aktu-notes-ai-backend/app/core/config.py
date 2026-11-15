@@ -43,10 +43,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
 
-    # Google Gemini AI
+    # Google Gemini AI (configured via .env: GEMINI_CHAT_MODEL, GEMINI_EMBEDDING_MODEL)
     GEMINI_API_KEY: str = ""
-    GEMINI_CHAT_MODEL: str = "gemini-2.0-flash"
-    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_CHAT_MODEL: str = "gemini-3.5-flash"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
     # Storage & Persistence
     CHROMA_PERSIST_DIR: str = "./storage/chroma"

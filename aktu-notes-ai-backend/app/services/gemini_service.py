@@ -81,35 +81,11 @@ class GeminiService:
                 )
                 full_prompt = f"Previous conversation:\n{history_text}\n\nCurrent Task:\n{prompt}"
 
-            # Fallback list of models in case the configured model is unavailable/deprecated
-            models_to_try = [self.model, "gemini-2.0-flash", "gemini-1.5-flash"]
-            # Deduplicate while preserving order
-            unique_models = []
-            for m in models_to_try:
-                if m and m not in unique_models:
-                    unique_models.append(m)
-
-            response = None
-            last_err = None
-
-            for model_name in unique_models:
-                try:
-                    response = self._client.models.generate_content(
-                        model=model_name,
-                        contents=full_prompt,
-                        config=config,
-                    )
-                    break
-                except Exception as err:
-                    err_str = str(err)
-                    logger.warning(f"Generation with {model_name} failed: {err_str}")
-                    last_err = err
-                    if any(phrase in err_str for phrase in ("404", "NOT_FOUND", "no longer available", "not found")):
-                        continue
-                    raise
-
-            if not response:
-                raise last_err or ExternalServiceError("All Gemini chat models failed.")
+            response = self._client.models.generate_content(
+                model=self.model,
+                contents=full_prompt,
+                config=config,
+            )
 
             response_text = response.text or ""
             return self._parse_json_response(response_text)

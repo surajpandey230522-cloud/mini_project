@@ -40,7 +40,7 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: 15
       REFRESH_TOKEN_EXPIRE_DAYS: 7
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-2.5-flash}
+      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3.5-flash}
       GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
       CHROMA_PERSIST_DIR: "/app/storage/chroma"
       UPLOAD_DIR: "/app/storage/uploads"

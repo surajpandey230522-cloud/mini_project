@@ -67,16 +67,7 @@ class EmbeddingService:
             if config:
                 kwargs["config"] = config
 
-            try:
-                response = self._client.models.embed_content(**kwargs)
-            except Exception as model_err:
-                # If model failed with current model, try fallback to text-embedding-004
-                if self.model != "text-embedding-004":
-                    logger.warning(f"Embedding failed with {self.model}: {model_err}. Retrying with text-embedding-004.")
-                    kwargs["model"] = "text-embedding-004"
-                    response = self._client.models.embed_content(**kwargs)
-                else:
-                    raise
+            response = self._client.models.embed_content(**kwargs)
 
             # Response contains list of ContentEmbedding objects
             embeddings = []
