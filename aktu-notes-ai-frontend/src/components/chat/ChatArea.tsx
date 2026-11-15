@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
+import { useDocuments } from "@/context/DocumentContext";
 import { CitationItem, MessageItem } from "@/types";
 import {
   Send,
@@ -18,27 +19,39 @@ import {
   Loader2,
   BookmarkCheck,
   HelpCircle,
+  Layers,
+  Database,
+  Cpu,
+  ArrowRight,
+  Clock,
 } from "lucide-react";
 
 interface ChatAreaProps {
   conversationId: string | null;
-  selectedDocIds: string[];
   onConversationCreated: (newId: string) => void;
   onOpenDocumentsDrawer?: () => void;
 }
 
 export function ChatArea({
   conversationId,
-  selectedDocIds,
   onConversationCreated,
   onOpenDocumentsDrawer,
 }: ChatAreaProps) {
   const { error, info } = useToast();
+  const {
+    documents,
+    completedDocs,
+    processingDocs,
+    selectedDocIds,
+    uploading,
+  } = useDocuments();
+
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [inputQuestion, setInputQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchingHistory, setFetchingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll to bottom of chat
   const scrollToBottom = () => {
@@ -71,12 +84,19 @@ export function ChatArea({
     loadHistory();
   }, [conversationId]);
 
+  // Focus textarea when document finishes processing and becomes selected
+  useEffect(() => {
+    if (selectedDocIds.length > 0 && processingDocs.length === 0) {
+      textareaRef.current?.focus();
+    }
+  }, [selectedDocIds.length, processingDocs.length]);
+
   const handleSend = async (questionText?: string) => {
     const textToSend = questionText || inputQuestion;
     if (!textToSend.trim() || loading) return;
 
     if (selectedDocIds.length === 0) {
-      error("Please select at least one completed PDF note to query!");
+      error("Please wait for your PDF to finish processing or select ready notes.");
       return;
     }
 
@@ -135,9 +155,30 @@ export function ChatArea({
     "Compare and contrast the architectures described on pages 10-15.",
   ];
 
+  // Helper booleans
+  const isCurrentlyProcessing = processingDocs.length > 0;
+  const hasReadyDocsSelected = selectedDocIds.length > 0;
+  const isInputDisabled =
+    loading ||
+    uploading ||
+    !hasReadyDocsSelected ||
+    (isCurrentlyProcessing && selectedDocIds.length === 0);
+
+  // Determine placeholder text
+  let inputPlaceholder = "Ask a question about your selected AKTU notes... (Press Enter to send)";
+  if (uploading) {
+    inputPlaceholder = "Uploading your PDF notes... Please wait.";
+  } else if (isCurrentlyProcessing && selectedDocIds.length === 0) {
+    inputPlaceholder = `Processing "${processingDocs[0].original_filename}"... Chat unlocks automatically once ready.`;
+  } else if (documents.length === 0) {
+    inputPlaceholder = "Upload a lecture note or Quantum PDF from the left sidebar to start chatting.";
+  } else if (!hasReadyDocsSelected) {
+    inputPlaceholder = "Select at least one completed note from the left sidebar to ask questions.";
+  }
+
   return (
     <div className="flex flex-col h-full bg-slate-950 flex-1 relative overflow-hidden">
-      {/* Top Context Bar */}
+      {/* Top Context & Status Bar */}
       <div className="h-12 border-b border-slate-800/80 px-4 flex items-center justify-between bg-slate-950/60 backdrop-blur-sm z-10 shrink-0">
         <div className="flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-indigo-400" />
@@ -145,19 +186,29 @@ export function ChatArea({
             Selected Scope:
           </span>
           <span
-            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              selectedDocIds.length > 0
+            className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+              hasReadyDocsSelected
                 ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/30"
-                : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                : "bg-slate-800 text-slate-400 border border-slate-700"
             }`}
           >
             {selectedDocIds.length} {selectedDocIds.length === 1 ? "PDF" : "PDFs"} active
           </span>
         </div>
 
-        {selectedDocIds.length === 0 && (
+        {/* Status Indicators in Header */}
+        {isCurrentlyProcessing && hasReadyDocsSelected && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-950/50 border border-indigo-500/30 text-[11px] text-indigo-300 animate-pulse">
+            <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
+            <span>
+              Indexing <strong>{processingDocs[0].original_filename}</strong> in background...
+            </span>
+          </div>
+        )}
+
+        {!hasReadyDocsSelected && !isCurrentlyProcessing && documents.length > 0 && (
           <p className="text-xs text-amber-400 flex items-center gap-1">
-            <AlertCircle className="w-3.5 h-3.5" /> Select notes in the sidebar to chat
+            <AlertCircle className="w-3.5 h-3.5" /> Check a note from the left sidebar to begin
           </p>
         )}
       </div>
@@ -169,8 +220,65 @@ export function ChatArea({
             <Loader2 className="w-5 h-5 animate-spin text-indigo-400 mr-2" />
             Loading conversation history...
           </div>
+        ) : isCurrentlyProcessing && selectedDocIds.length === 0 ? (
+          /* Smooth Dedicated Processing Waiting Screen */
+          <div className="max-w-xl mx-auto py-12 px-4 text-center animate-in fade-in zoom-in-95 duration-300">
+            <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-3xl bg-indigo-500/20 animate-ping opacity-60" />
+              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-2xl shadow-indigo-600/40">
+                <Loader2 className="w-10 h-10 animate-spin" />
+              </div>
+            </div>
+
+            <h3 className="text-2xl font-bold text-white tracking-tight">
+              Processing Your Notes
+            </h3>
+            <p className="text-xs font-mono text-indigo-300 mt-1 max-w-sm mx-auto truncate px-3 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/40">
+              {processingDocs[0]?.original_filename || "Academic PDF"}
+            </p>
+
+            <p className="text-sm text-slate-400 mt-3 max-w-md mx-auto leading-relaxed">
+              We are extracting text, creating semantic chunks, and generating vector embeddings in NeonDB.
+              Your chat will unlock automatically in a few seconds.
+            </p>
+
+            {/* Pipeline Stage Tracker */}
+            <div className="mt-8 space-y-3 max-w-md mx-auto text-left">
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900 border border-emerald-900/40 text-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div className="flex-1">
+                  <span className="font-semibold text-white">1. PDF Validated & Uploaded</span>
+                  <p className="text-[11px] text-slate-400">Magic byte verification (%PDF-) passed</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/40 text-xs shadow-md">
+                <Loader2 className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
+                <div className="flex-1">
+                  <span className="font-semibold text-indigo-200">2. PyMuPDF Text Extraction</span>
+                  <p className="text-[11px] text-indigo-300/80">Scanning pages and verifying text readability</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-500">
+                <Layers className="w-4 h-4 text-slate-600 shrink-0" />
+                <div className="flex-1">
+                  <span className="font-semibold text-slate-400">3. Chunking & Overlap</span>
+                  <p className="text-[11px] text-slate-600">Preserving page boundaries and syllabus citations</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-500">
+                <Database className="w-4 h-4 text-slate-600 shrink-0" />
+                <div className="flex-1">
+                  <span className="font-semibold text-slate-400">4. Gemini Embeddings & NeonDB pgvector</span>
+                  <p className="text-[11px] text-slate-600">Indexing 768-dim vectors for cosine similarity</p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : messages.length === 0 ? (
-          /* Empty Chat State */
+          /* Empty Chat Welcome State */
           <div className="max-w-2xl mx-auto py-12 px-4 text-center">
             <div className="w-14 h-14 rounded-3xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white mx-auto shadow-xl shadow-indigo-600/20 mb-4">
               <Sparkles className="w-7 h-7" />
@@ -188,7 +296,7 @@ export function ChatArea({
                 <button
                   key={idx}
                   onClick={() => handleSend(prompt)}
-                  disabled={selectedDocIds.length === 0}
+                  disabled={!hasReadyDocsSelected || isInputDisabled}
                   className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900 text-xs text-slate-300 hover:text-white transition-all text-left flex items-start gap-2.5 disabled:opacity-40 group"
                 >
                   <HelpCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
@@ -198,6 +306,7 @@ export function ChatArea({
             </div>
           </div>
         ) : (
+          /* Messages List */
           messages.map((msg) => (
             <div
               key={msg.id}
@@ -286,27 +395,40 @@ export function ChatArea({
 
       {/* Input Area */}
       <div className="p-3 sm:p-4 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md shrink-0">
-        <div className="max-w-4xl mx-auto relative flex items-end rounded-2xl bg-slate-900 border border-slate-800 focus-within:border-indigo-500 transition-colors p-2 shadow-xl">
+        <div
+          className={`max-w-4xl mx-auto relative flex items-end rounded-2xl border transition-all p-2 shadow-xl ${
+            isInputDisabled
+              ? "bg-slate-900/40 border-slate-800/60 opacity-80"
+              : "bg-slate-900 border-slate-800 focus-within:border-indigo-500"
+          }`}
+        >
           <textarea
+            ref={textareaRef}
             value={inputQuestion}
             onChange={(e) => setInputQuestion(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={loading}
+            disabled={isInputDisabled}
             rows={2}
-            placeholder={
-              selectedDocIds.length > 0
-                ? "Ask a question about your selected AKTU notes... (Press Enter to send)"
-                : "Select at least one PDF note from the sidebar to ask questions..."
-            }
-            className="w-full bg-transparent px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none resize-none custom-scrollbar disabled:opacity-50"
+            placeholder={inputPlaceholder}
+            className="w-full bg-transparent px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none resize-none custom-scrollbar disabled:cursor-not-allowed"
           />
 
           <button
             onClick={() => handleSend()}
-            disabled={loading || !inputQuestion.trim() || selectedDocIds.length === 0}
-            className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all disabled:opacity-30 disabled:hover:bg-indigo-600 shrink-0 self-end ml-2"
+            disabled={isInputDisabled || !inputQuestion.trim()}
+            className={`p-2.5 rounded-xl text-white shadow-md transition-all shrink-0 self-end ml-2 ${
+              isInputDisabled || !inputQuestion.trim()
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20"
+            }`}
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isCurrentlyProcessing && selectedDocIds.length === 0 ? (
+              <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
           </button>
         </div>
 
@@ -317,4 +439,3 @@ export function ChatArea({
     </div>
   );
 }
-

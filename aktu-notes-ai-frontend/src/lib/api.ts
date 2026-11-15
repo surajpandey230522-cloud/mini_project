@@ -196,12 +196,11 @@ export const api = {
       });
     },
 
-    list: (skip = 0, limit = 50, status?: string) => {
+    list: (page = 1, page_size = 50) => {
       const params = new URLSearchParams({
-        skip: skip.toString(),
-        limit: limit.toString(),
+        page: page.toString(),
+        page_size: page_size.toString(),
       });
-      if (status) params.append("status", status);
       return apiFetch<DocumentListResponse>(`/api/v1/documents?${params.toString()}`);
     },
 

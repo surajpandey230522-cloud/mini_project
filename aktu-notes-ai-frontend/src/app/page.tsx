@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useDocuments } from "@/context/DocumentContext";
 import { Navbar } from "@/components/Navbar";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { AuthModal } from "@/components/auth/AuthModal";
@@ -9,10 +10,11 @@ import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
 import { DocumentManager } from "@/components/documents/DocumentManager";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { ChatArea } from "@/components/chat/ChatArea";
-import { FolderOpen, MessageSquare, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { FolderOpen, MessageSquare, Loader2 } from "lucide-react";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { selectedDocIds, processingDocs } = useDocuments();
 
   // Modals state
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -20,7 +22,6 @@ export default function Home() {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // App interaction state
-  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [refreshConvTrigger, setRefreshConvTrigger] = useState(0);
 
@@ -31,20 +32,6 @@ export default function Home() {
   const openAuth = (mode: "login" | "register" = "login") => {
     setAuthModalMode(mode);
     setAuthModalOpen(true);
-  };
-
-  const handleToggleDocSelect = (docId: string) => {
-    setSelectedDocIds((prev) =>
-      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
-    );
-  };
-
-  const handleSelectAllDocs = (docIds: string[]) => {
-    setSelectedDocIds(docIds);
-  };
-
-  const handleClearDocs = () => {
-    setSelectedDocIds([]);
   };
 
   const handleConversationCreated = (newId: string) => {
@@ -84,7 +71,10 @@ export default function Home() {
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 font-medium"
               >
                 <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
-                Notes ({selectedDocIds.length})
+                Notes ({selectedDocIds.length} ready)
+                {processingDocs.length > 0 && (
+                  <Loader2 className="w-3 h-3 text-amber-400 animate-spin ml-0.5" />
+                )}
               </button>
               <button
                 onClick={() => setShowChatsMobile(!showChatsMobile)}
@@ -101,12 +91,7 @@ export default function Home() {
                 showDocsMobile ? "fixed inset-y-16 left-0 z-30 w-80 shadow-2xl" : "hidden"
               } md:block md:relative md:w-80 h-full shrink-0`}
             >
-              <DocumentManager
-                selectedDocIds={selectedDocIds}
-                onToggleSelect={handleToggleDocSelect}
-                onSelectAll={handleSelectAllDocs}
-                onClearSelection={handleClearDocs}
-              />
+              <DocumentManager />
             </aside>
 
             {/* Middle Column: Chat Conversations Sidebar */}
@@ -129,7 +114,6 @@ export default function Home() {
             <section className="flex-1 flex flex-col h-full overflow-hidden">
               <ChatArea
                 conversationId={activeConversationId}
-                selectedDocIds={selectedDocIds}
                 onConversationCreated={handleConversationCreated}
               />
             </section>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { DocumentProvider } from "@/context/DocumentContext";
 
 export const metadata: Metadata = {
   title: "AKTU Notes AI — Chat With Your Notes & Quantum PDFs",
@@ -18,7 +19,9 @@ export default function RootLayout({
     <html lang="en" className="h-full dark antialiased">
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 font-sans">
         <ToastProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <DocumentProvider>{children}</DocumentProvider>
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>

@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
+import { useDocuments } from "@/context/DocumentContext";
 import { api } from "@/lib/api";
-import { useToast } from "@/context/ToastContext";
-import { DocumentItem } from "@/types";
 import {
   FileText,
   UploadCloud,
@@ -17,92 +16,30 @@ import {
   Square,
   RefreshCw,
   FolderOpen,
+  Sparkles,
 } from "lucide-react";
 
-interface DocumentManagerProps {
-  selectedDocIds: string[];
-  onToggleSelect: (docId: string) => void;
-  onSelectAll: (docIds: string[]) => void;
-  onClearSelection: () => void;
-}
+export function DocumentManager() {
+  const {
+    documents,
+    completedDocs,
+    processingDocs,
+    selectedDocIds,
+    loading,
+    uploading,
+    uploadDocument,
+    deleteDocument,
+    toggleSelectDoc,
+    selectAllCompleted,
+    clearSelection,
+    refreshDocuments,
+  } = useDocuments();
 
-export function DocumentManager({
-  selectedDocIds,
-  onToggleSelect,
-  onSelectAll,
-  onClearSelection,
-}: DocumentManagerProps) {
-  const { success, error, info } = useToast();
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch documents
-  const fetchDocuments = async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const resp = await api.documents.list(0, 50);
-      setDocuments(resp.items || []);
-
-      // If no docs selected yet, auto-select all completed docs
-      if (selectedDocIds.length === 0 && resp.items.length > 0) {
-        const completedIds = resp.items
-          .filter((d) => d.status === "completed")
-          .map((d) => d.id);
-        if (completedIds.length > 0) {
-          onSelectAll(completedIds);
-        }
-      }
-    } catch (err: any) {
-      if (!silent) error("Could not load your uploaded notes.");
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
-
-  // Poll while any document is in pending or processing status
-  useEffect(() => {
-    const hasPending = documents.some(
-      (d) => d.status === "pending" || d.status === "processing"
-    );
-    if (!hasPending) return;
-
-    const interval = setInterval(() => {
-      fetchDocuments(true);
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [documents]);
-
   const handleFileUpload = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      error("Only PDF files are supported (.pdf)");
-      return;
-    }
-
-    if (file.size > 25 * 1024 * 1024) {
-      error("File size exceeds 25MB limit.");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const resp = await api.documents.upload(file);
-      success(`Uploaded "${file.name}"! Extracting text and generating pgvector embeddings...`);
-      await fetchDocuments(true);
-      // Automatically add to selected if needed
-      onToggleSelect(resp.id);
-    } catch (err: any) {
-      error(err.message || "Failed to upload document.");
-    } finally {
-      setUploading(false);
-    }
+    await uploadDocument(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -114,29 +51,12 @@ export function DocumentManager({
     }
   };
 
-  const handleDelete = async (docId: string, filename: string) => {
-    if (!confirm(`Are you sure you want to delete "${filename}" and its vector embeddings?`)) {
-      return;
-    }
-    try {
-      await api.documents.delete(docId);
-      success(`Deleted "${filename}".`);
-      setDocuments((prev) => prev.filter((d) => d.id !== docId));
-      if (selectedDocIds.includes(docId)) {
-        onToggleSelect(docId);
-      }
-    } catch (err: any) {
-      error(err.message || "Failed to delete document.");
-    }
-  };
-
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const completedDocs = documents.filter((d) => d.status === "completed");
   const allCompletedSelected =
     completedDocs.length > 0 &&
     completedDocs.every((d) => selectedDocIds.includes(d.id));
@@ -152,7 +72,7 @@ export function DocumentManager({
           </h2>
         </div>
         <button
-          onClick={() => fetchDocuments()}
+          onClick={() => refreshDocuments(false)}
           title="Refresh documents"
           className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
         >
@@ -192,7 +112,7 @@ export function DocumentManager({
           {uploading ? (
             <>
               <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-              <p className="text-xs font-semibold text-indigo-300">Uploading & Indexing PDF...</p>
+              <p className="text-xs font-semibold text-indigo-300">Uploading PDF...</p>
             </>
           ) : (
             <>
@@ -203,25 +123,40 @@ export function DocumentManager({
                 <p className="text-xs font-semibold text-slate-200">
                   Click or drag AKTU notes / Quantum PDF
                 </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">PDF up to 25MB • PyMuPDF text & pgvector</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  PDF up to 25MB • PyMuPDF & NeonDB pgvector
+                </p>
               </div>
             </>
           )}
         </div>
       </div>
 
+      {/* Live Processing Notice (if any PDF is currently processing) */}
+      {processingDocs.length > 0 && (
+        <div className="mt-3 p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 animate-pulse">
+          <div className="flex items-center gap-2 text-xs font-semibold text-indigo-300">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 shrink-0" />
+            <span>Processing {processingDocs.length} PDF{processingDocs.length > 1 ? "s" : ""}...</span>
+          </div>
+          <p className="text-[11px] text-indigo-200/70 mt-1">
+            Extracting text & generating vector embeddings. Will automatically unlock chat once finished.
+          </p>
+        </div>
+      )}
+
       {/* Selection Actions */}
       {completedDocs.length > 0 && (
         <div className="mt-4 flex items-center justify-between text-xs text-slate-400 px-1">
           <span>
-            {selectedDocIds.length} of {completedDocs.length} selected for AI chat
+            {selectedDocIds.length} of {completedDocs.length} ready notes selected
           </span>
           <button
             onClick={() => {
               if (allCompletedSelected) {
-                onClearSelection();
+                clearSelection();
               } else {
-                onSelectAll(completedDocs.map((d) => d.id));
+                selectAllCompleted();
               }
             }}
             className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
@@ -257,8 +192,10 @@ export function DocumentManager({
               <div
                 key={doc.id}
                 className={`group relative p-3 rounded-2xl border transition-all ${
-                  isSelected
+                  isProcessing
                     ? "bg-indigo-950/20 border-indigo-500/40 shadow-sm"
+                    : isSelected
+                    ? "bg-slate-900 border-indigo-500/50 shadow-sm"
                     : "bg-slate-900/50 border-slate-800/80 hover:border-slate-700/80 hover:bg-slate-900"
                 }`}
               >
@@ -266,7 +203,8 @@ export function DocumentManager({
                   {/* Select Checkbox for Completed Docs */}
                   {isCompleted ? (
                     <button
-                      onClick={() => onToggleSelect(doc.id)}
+                      onClick={() => toggleSelectDoc(doc.id)}
+                      title={isSelected ? "Deselect from chat" : "Select for chat"}
                       className="mt-0.5 text-indigo-400 hover:text-indigo-300 shrink-0"
                     >
                       {isSelected ? (
@@ -276,7 +214,7 @@ export function DocumentManager({
                       )}
                     </button>
                   ) : (
-                    <div className="mt-0.5 shrink-0">
+                    <div className="mt-0.5 shrink-0" title="Processing in background...">
                       {isProcessing ? (
                         <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
                       ) : (
@@ -299,14 +237,14 @@ export function DocumentManager({
                       <span>•</span>
                       {isCompleted && (
                         <>
-                          <span>{doc.page_count} pages</span>
+                          <span className="text-slate-300">{doc.page_count} pages</span>
                           <span>•</span>
-                          <span>{doc.chunk_count} chunks</span>
+                          <span className="text-indigo-300">{doc.chunk_count} chunks</span>
                         </>
                       )}
                       {isProcessing && (
-                        <span className="text-amber-400 flex items-center gap-1 font-medium">
-                          <Clock className="w-3 h-3" /> Processing...
+                        <span className="text-amber-400 flex items-center gap-1 font-medium animate-pulse">
+                          <Clock className="w-3 h-3" /> Indexing vectors...
                         </span>
                       )}
                       {isFailed && (
@@ -329,7 +267,7 @@ export function DocumentManager({
                       <Download className="w-3.5 h-3.5" />
                     </a>
                     <button
-                      onClick={() => handleDelete(doc.id, doc.original_filename)}
+                      onClick={() => deleteDocument(doc.id, doc.original_filename)}
                       title="Delete document"
                       className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
                     >
@@ -351,4 +289,3 @@ export function DocumentManager({
     </div>
   );
 }
-
