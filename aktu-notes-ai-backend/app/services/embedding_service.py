@@ -11,6 +11,16 @@ from app.core.logging import logger
 settings = get_settings()
 
 
+def is_valid_gemini_key(key: Optional[str]) -> bool:
+    """Check if key is non-empty and not a dummy placeholder."""
+    if not key:
+        return False
+    lower = key.strip().lower()
+    if any(p in lower for p in ("your_gemini", "your_api", "placeholder", "test", "change_me", "example")):
+        return False
+    return len(key.strip()) > 10
+
+
 class EmbeddingService:
     """Generates vector embeddings using the official Google Gemini SDK."""
 
@@ -19,7 +29,7 @@ class EmbeddingService:
         self.model = model or settings.GEMINI_EMBEDDING_MODEL
         self._client = None
 
-        if self.api_key and self.api_key != "your_gemini_api_key":
+        if is_valid_gemini_key(self.api_key):
             try:
                 from google import genai
                 self._client = genai.Client(api_key=self.api_key)

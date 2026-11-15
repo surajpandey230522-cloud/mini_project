@@ -9,6 +9,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 from app.core.config import get_settings
 from app.core.exceptions import ExternalServiceError
 from app.core.logging import logger
+from app.services.embedding_service import is_valid_gemini_key
 
 settings = get_settings()
 
@@ -39,7 +40,7 @@ class GeminiService:
         self.model = model or settings.GEMINI_CHAT_MODEL
         self._client = None
 
-        if self.api_key and self.api_key != "your_gemini_api_key":
+        if is_valid_gemini_key(self.api_key):
             try:
                 from google import genai
                 self._client = genai.Client(api_key=self.api_key)

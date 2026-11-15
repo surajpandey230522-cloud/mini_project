@@ -1,0 +1,35 @@
+# Environment files
+.env
+.env.local
+.env.*
+
+# Python Virtual Environments
+venv/
+.venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Storage & Databases
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/chroma/*
+!storage/chroma/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
