@@ -27,6 +27,12 @@ storage/chroma/*
 *.sqlite
 *.sqlite3
 
+# Node.js
+node_modules/
+.next/
+out/
+build/
+
 # IDE & OS
 .vscode/
 .idea/
