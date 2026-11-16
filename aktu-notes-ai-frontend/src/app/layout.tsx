@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full dark antialiased">
-      <body className="min-h-full flex flex-col bg-[#030712] text-slate-100 font-sans">
+    <html lang="en" className="h-full antialiased scroll-smooth">
+      <body className="min-h-full flex flex-col bg-[#f8fafc] text-slate-800 font-sans selection:bg-indigo-600 selection:text-white">
         <ToastProvider>
           <AuthProvider>
             <DocumentProvider>{children}</DocumentProvider>
